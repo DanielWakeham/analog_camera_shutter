@@ -1,0 +1,25 @@
+--cpu Cortex-M0
+"ldr\startup_stm32f072xb.o"
+"ldr\main.o"
+"ldr\stm32f0xx_it.o"
+"ldr\stm32f0xx_hal_msp.o"
+"ldr\stm32f0xx_hal_tim.o"
+"ldr\stm32f0xx_hal_tim_ex.o"
+"ldr\stm32f0xx_hal_rcc.o"
+"ldr\stm32f0xx_hal_rcc_ex.o"
+"ldr\stm32f0xx_hal.o"
+"ldr\stm32f0xx_hal_i2c.o"
+"ldr\stm32f0xx_hal_i2c_ex.o"
+"ldr\stm32f0xx_hal_gpio.o"
+"ldr\stm32f0xx_hal_dma.o"
+"ldr\stm32f0xx_hal_cortex.o"
+"ldr\stm32f0xx_hal_pwr.o"
+"ldr\stm32f0xx_hal_pwr_ex.o"
+"ldr\stm32f0xx_hal_flash.o"
+"ldr\stm32f0xx_hal_flash_ex.o"
+"ldr\stm32f0xx_hal_exti.o"
+"ldr\system_stm32f0xx.o"
+--strict --scatter "ldr\ldr.sct"
+--summary_stderr --info summarysizes --map --load_addr_map_info --xref --callgraph --symbols
+--info sizes --info totals --info unused --info veneers
+--list "ldr.map" -o ldr\ldr.axf
