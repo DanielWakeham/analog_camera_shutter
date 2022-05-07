@@ -6,7 +6,7 @@ This project aims to build a simple mechanical system, controlled via microcontr
 
 ## Circuit Schematic
 
-Parts needed:
+**Parts needed:**
 
 - STM32F072B Discovery board
 - 12V push-type solenoid
@@ -18,13 +18,13 @@ Parts needed:
 - Breadboard
 - Jumper wires
 
-Below is the circuit diagram:
+**Below is the circuit diagram:**
 
 ![Circuit Schematic](/images/schematic.PNG)
 
 The flyback diode in parallel with the solenoid is used to prevent backwards voltage at power-off to prevent damage to components. The resistors are used as pull-down resistors to prevent floating signals.
 
-Here is the assembled circuit:
+**Here is the assembled circuit:**
 
 ![Assembled Circuit](/images/photo_circuit.jpg)
 
