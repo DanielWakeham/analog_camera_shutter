@@ -21,6 +21,8 @@
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 
+/* USER FUNCTIONS */
+
 /**
   * @brief  The application entry point.
   * @retval int
@@ -34,29 +36,47 @@ int main(void)
 
 	/******************** PERIPHERAL ENABLE AND CONFIGURATION ********************/
 	__HAL_RCC_GPIOA_CLK_ENABLE(); 												// Enable GPIOC clock
+	__HAL_RCC_GPIOB_CLK_ENABLE(); 												// Enable GPIOC clock
 	__HAL_RCC_GPIOC_CLK_ENABLE(); 												// Enable GPIOC clock
-	__HAL_RCC_ADC1_CLK_ENABLE();													// Enable ADC peripheral
+	__HAL_RCC_ADC1_CLK_ENABLE();													// Enable ADC clock
+	__HAL_RCC_TIM3_CLK_ENABLE();													// Enable TIM2 clock
 	
 	// Configure USER button
 	GPIO_InitTypeDef initStr_A = {GPIO_PIN_0,
 																GPIO_MODE_INPUT,
 																GPIO_SPEED_FREQ_LOW,
 																GPIO_PULLDOWN};
-	HAL_GPIO_Init(GPIOC, &initStr_A); 										// Initialize USER button
+	HAL_GPIO_Init(GPIOA, &initStr_A); 										// Initialize USER button
+																
+	// Configure PB1 for analog input
+	GPIO_InitTypeDef initStr_B = {GPIO_PIN_1,
+																GPIO_MODE_ANALOG};
+	HAL_GPIO_Init(GPIOB, &initStr_B); 										// Initialize PB1
+	ADC1->CFGR1 	|= 0x2010;															// 8b resoultion, continuous conversion mode, HW triggers disabled
+	ADC1->CHSELR 	|= 0x200;																// Channel 9 selected
   
   // Configure LED pins
-	GPIO_InitTypeDef initStr_C = {(GPIO_PIN_6 | GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9),
+	GPIO_InitTypeDef initStr_C = {(GPIO_PIN_7 | GPIO_PIN_8 | GPIO_PIN_9),
 																GPIO_MODE_OUTPUT_PP,
 																GPIO_SPEED_FREQ_LOW,
 																GPIO_NOPULL};
 	HAL_GPIO_Init(GPIOC, &initStr_C); 										// Initialize LEDS pins
-	
-	// Configure PC1 for analog input
-	GPIO_InitTypeDef initStr_C_1 = {GPIO_PIN_1,
-																	GPIO_MODE_ANALOG};
-	HAL_GPIO_Init(GPIOC, &initStr_C_1); 									// Initialize PC1
-	ADC1->CFGR1 |= 0x2002;																// 8b resoultion, continuous conversion mode, HW triggers disabled
-	ADC1->CHSELR |= 0x800;																// Channel 11 selected
+																															
+	// Timer Configuration
+	GPIO_InitTypeDef initStr_C_1 = {GPIO_PIN_6,
+																	GPIO_MODE_AF_PP,
+																	GPIO_SPEED_FREQ_HIGH,
+																	GPIO_PULLDOWN};
+	HAL_GPIO_Init(GPIOC, &initStr_C_1);
+	GPIOC->AFR[1] |= 0x2;																	// Alternate Function; TIM3_CH1
+																		
+	TIM3->PSC 		|= 0x18F;																// PSC = 399 for 20kHz timer clock
+	TIM3->ARR 		 = 60000-1;															// ARR = 60000 for 3 second max PWM
+	TIM3->CCMR1		|= 	TIM_CCMR1_OC1M_2 	| 
+										TIM_CCMR1_OC1M_1 	|
+										TIM_CCMR1_OC1PE;										// PWM mode 1; Preload enabled
+	TIM3->CCER		|= TIM_CCER_CC1E;								
+																
 	/****************** END PERIPHERAL ENABLE AND CONFIGURATION ******************/
 																	
 	/****************************** ADC Calibration ******************************/
@@ -101,31 +121,44 @@ int main(void)
 	ADC1->CR |= ADC_CR_ADSTART;														// Start ADC
   uint32_t debouncer = 0;                               // debouncer variable
   uint32_t n = 100;
-  uint8_t light_data[n];                                // Light data array
-  uint32_t sum;
-  uint8_t avg;
+  uint8_t light_data[100];                              // Light data array
+  volatile uint32_t sum;																// Sum for the array data
+  volatile uint8_t avg;																	// Avg of light sensor data
+	
+	uint8_t baseline_li = 128;														// Baseline for light measurement
+	uint8_t baseline_delay = 0xFF;												// Baseline speed w.r.t light measurement
+	volatile uint16_t shutter_delay;											// Delay used by CCR1 PWM timer
   /*************************** END PRE-LOOP CODE **************************/
 
   while (1)
   {
-		debouncer = (debouncer << 1); // Always shift every loop iteration
+    debouncer = (debouncer << 1); 											// Always shift every loop iteration
 		if (GPIOA->IDR & 0x1) 
 		{ // If input signal is set/high
-			debouncer |= 0x01; // Set lowest bit of bit-vector
+			debouncer |= 0x01; 																// Set lowest bit of bit-vector
 		}
-		if (debouncer == 0x7FFFFFFF) 
-		{
-			for (int i = 0; i < n; ++i)
+		if (debouncer == 0x7FFFFFFF) 												// if (Push Button)
+		{		
+			for (int i = 0; i < n; ++i)												// Collect 100 Samples for ligh measurement and sum
       {
-        HAL_Delay(1);
         light_data[i] = ADC1->DR;
+				sum += light_data[i];
       }
-      for (int i = 0; i < n; ++i)
-      {
-        sum += light_data[i];
-      }
-      avg = sum / n;
+      avg = sum / n;																		// Avg of sum
+			sum = 0;
+			
+			shutter_delay = baseline_li / avg * baseline_delay; // Shutter delay calculation
+			
+			if (shutter_delay < baseline_delay)								// Set minimum shutter speed 
+				shutter_delay = baseline_delay;
+			if (shutter_delay > 20000)												// Set maximum shutter speed
+				shutter_delay = 20000;*/
+			TIM3->CCR1			= shutter_delay - 1;							// Set CCR1 for PWM ie shutter speed
+			TIM3->CR1			 |= 0x1;														// Enable counter
+			HAL_Delay(1000);																	// Delay for duration of ARR
+			TIM3->CR1 &= ~(0x1);															// Disable counter for a maximum of a single pulse
 		}
+		
   }
 
 }
