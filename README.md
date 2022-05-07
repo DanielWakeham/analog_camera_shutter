@@ -24,6 +24,10 @@ Below is the circuit diagram:
 
 The flyback diode in parallel with the solenoid is used to prevent backwards voltage at power-off to prevent damage to components. The resistors are used as pull-down resistors to prevent floating signals.
 
+Here is the assembled circuit:
+
+![Assembled Circuit](/images/photo_circuit.jpg)
+
 ## Basic Operation
 
 The embedded environment can be set up using ARM development tools. For this project I used STM32CubeMX and Keil uVision5. The main.c file uses HAL libraries so once the the project has been successfully set up on your own machine, substitute the main.c file in the repo into the proper location and build the project onto the board. The solenoid is operated by the push button on the board. When the button is pushed, light data will be picked up by the photoresistor and used to determine the amount of time that the solenoid will be actively pushe the shutter on the camera. It is important to have the camera in "Bulb" setting so that the shutter is open for the duration that the solenoid is extended.  
